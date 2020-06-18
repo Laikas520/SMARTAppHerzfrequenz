@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
+		<script src="../JavaScript/chartjs-plugin-annotation-master/chartjs-plugin-annotation.js"></script>
+		<!--- Das drunter bringt nur nochmal anderen Style --->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"> 
+		<title>Verlauf der Herzrate</title>
+	</head>
+	<body>
+
+	
+		<script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+		
+		<h2> Vorname: <p style="display:inline", id="Vorname"></p></h2>
+		<h2> Nachname: <p style="display:inline", id="Nachname"></p></h2>		
+		<table id="Messwerte" border="1" style = "font-size: 20px; text-align: center">
+		<tr>
+		<!--<td style="text-align: center"> <strong style = "font-size: 20px;">Datum </strong></td>
+		<td style="text-align: center"> <strong style = "font-size: 20px;"> Messwert</strong> </td>-->
+		</tr>
+		</table>
+		<div class="container">
+			<canvas id="myChart"></canvas>
+		</div>
+		<script>
+
+			//Patient festlegen und Verbindung zum Server (hier OHNE Authentifizierung)
+			const client = new FHIR.client({
+				serverUrl: "http://hapi.fhir.org/baseR4",
+				tokenResponse: {
+					patient: "1181348"
+				}
+			});
+			
+			var werte = [];
+			var datum = [];
+			
+			function getData(observations){
+				var len = observations.entry.length;
+				console.log(len);
+				for (var i = 0; i < len; i++){
+				if(observations.entry[i].resource.code.coding[0].code == "8867-4"){
+					werte.push(observations.entry[i].resource.valueQuantity.value);
+					datum.push(observations.entry[i].resource.effectiveDateTime);
+				}
+				}
+				}			
+			
+			
+			function chooseColor(wert){
+				if(wert<50 || wert>90){
+					return 'rgba(255, 0, 0, 0.2)';
+				}else{
+					return 'rgba(0, 255, 0, 0.2)';
+					}
+			}
+			
+			
+			
+			function buildTable(werte){
+				var table = document.getElementById("Messwerte");
+				var row1 = table.insertRow(1);
+				var row2 = table.insertRow(1);
+				var row3 = table.insertRow(1);
+				var row4 = table.insertRow(1);
+				var row5 = table.insertRow(1);
+				var cell1 = row1.insertCell(0);
+				var cell2 = row2.insertCell(0);
+				var cell3 = row3.insertCell(0);
+				var cell4 = row4.insertCell(0);
+				var cell5 = row5.insertCell(0);
+				var cell6 = row1.insertCell(1);
+				var cell7 = row2.insertCell(1);
+				var cell8 = row3.insertCell(1);
+				var cell9 = row4.insertCell(1);
+				var cell10 = row5.insertCell(1);
+
+				cell1.innerHTML = datum[datum.length-5];
+				cell2.innerHTML = datum[datum.length-4];
+				cell3.innerHTML = datum[datum.length-3];
+				cell4.innerHTML = datum[datum.length-2];
+				cell5.innerHTML = datum[datum.length-1];
+				
+				cell6.innerHTML = werte[werte.length-5];
+				cell7.innerHTML = werte[werte.length-4];
+				cell8.innerHTML = werte[werte.length-3];
+				cell9.innerHTML = werte[werte.length-2];
+				cell10.innerHTML = werte[werte.length-1];
+			}
+			
+			function buildGraph(){
+
+				console.log(datum);
+				let myChart = document.getElementById('myChart').getContext('2d');
+				let massPopChart = new Chart(myChart, {
+					type:'bar', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
+					data:{
+					labels:[datum[4], datum[3], datum[2], datum[1], datum[0]],
+					datasets:[{
+					label:'Herzfrequenz',
+					data:[
+						werte[4],
+						werte[3],
+						werte[2],
+						werte[1],
+						werte[0]
+					],
+					 backgroundColor: [
+						chooseColor(werte[4]),
+						chooseColor(werte[3]),
+						chooseColor(werte[2]),
+						chooseColor(werte[1]),
+						chooseColor(werte[0])
+					],
+					borderWidth:1,
+					borderColor:'#777',
+					hoverBorderWidth:3,
+					hoverBorderColor:'#000'
+					}]
+				},
+				options:{
+					title:{
+					display:true,
+					text:'Herzfrequenz der letzten Messungen',
+					fontSize:25
+					},
+					annotation: {
+						annotations:[{
+							type:'line',
+							mode:'horizontal',
+							scaleID: 'y-axis-0',
+							value: 90,
+							borderColor: 'rgb(255,0,0)',
+							borderWidth: 4,
+							label:{
+								enabled:false,
+								content:'Obere Grenze'
+								}
+						}, {
+							type:'line',
+							mode:'horizontal',
+							scaleID: 'y-axis-0',
+							value: 50,
+							borderColor: 'rgb(255,0,0)',
+							borderWidth: 4,
+							label:{
+								enabled:false,
+								content:'Untere Grenze'
+								}
+						
+						}]
+						},
+						
+					legend:{
+					display:false,
+					position:'right',
+					labels:{
+						fontColor:'#000'
+					}
+					},
+					layout: {
+						padding: {
+							left: 0,
+							right: 0,
+							top: 0,
+							bottom: 0
+						}
+					},
+					
+				
+					scales:{
+						yAxes: [{
+							scaleLabel:{
+								display:true,
+								labelString: 'Herzfrequenz in Schläge/Minute',
+								fontSize:15
+								},
+							ticks:{
+								suggestedMax: 110,
+								beginAtZero:true
+									}
+								}]
+							
+							}
+				}
+				});
+				}
+			
+			
+			//Get Patient um daraus Vorname, Nachname auszulesen
+			client.patient.read().then(function(pt){
+				pt.name.map(function(name) {
+				  document.getElementById("Vorname").innerText = name.given;
+				  document.getElementById("Nachname").innerText = name.family;
+				  
+				});
+			});	
+			
+			// Get Observations des Patienten als Bundle
+            client.request("/Observation?patient=" + client.patient.id, {
+                resolveReferences: [ "observationReference" ],
+                graph: true
+             }).then(function(observations){
+				getData(observations);
+				//buildTable(werte);
+				buildGraph();
+			 });
+
+	
+		</script>
+	</body>
+</html>
